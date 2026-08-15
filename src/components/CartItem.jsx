@@ -6,6 +6,22 @@ import {
   updateQuantity
 } from "../redux/CartSlice";
 
+// Calculate the total cost of all plants in the cart
+function calculateTotalCartAmount(items) {
+  return items.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  );
+}
+
+// Calculate the total number of plants in the cart
+function calculateTotalCartQuantity(items) {
+  return items.reduce(
+    (total, item) => total + item.quantity,
+    0
+  );
+}
+
 export default function CartItem() {
   const dispatch = useDispatch();
 
@@ -13,17 +29,41 @@ export default function CartItem() {
     (state) => state.cart.items
   );
 
-  const totalQuantity = items.reduce(
-    (sum, item) => sum + item.quantity,
-    0
-  );
+  // Dedicated functions for cart totals
+  const totalCartAmount = calculateTotalCartAmount(items);
+  const totalCartQuantity = calculateTotalCartQuantity(items);
 
-  const totalCost = items.reduce(
-    (sum, item) =>
-      sum + item.price * item.quantity,
-    0
-  );
+  // Increase plant quantity
+  const handleIncrease = (id) => {
+    dispatch(
+      updateQuantity({
+        id: id,
+        change: 1
+      })
+    );
+  };
 
+  // Decrease plant quantity
+  const handleDecrease = (id, quantity) => {
+    if (quantity === 1) {
+      // Remove the item completely when quantity reaches zero
+      dispatch(removeItem(id));
+    } else {
+      dispatch(
+        updateQuantity({
+          id: id,
+          change: -1
+        })
+      );
+    }
+  };
+
+  // Delete plant from cart
+  const handleDelete = (id) => {
+    dispatch(removeItem(id));
+  };
+
+  // Empty cart display
   if (items.length === 0) {
     return (
       <main className="cart-page">
@@ -46,96 +86,111 @@ export default function CartItem() {
 
   return (
     <main className="cart-page">
+
+      {/* Cart Summary */}
       <div className="cart-summary">
         <h1>Shopping Cart</h1>
 
         <p>
           <strong>Total Plants:</strong>{" "}
-          {totalQuantity}
+          {totalCartQuantity}
         </p>
 
         <p>
-          <strong>Total Cost:</strong>{" "}
-          ${totalCost.toFixed(2)}
+          <strong>Total Cart Amount:</strong>{" "}
+          ${totalCartAmount.toFixed(2)}
         </p>
       </div>
 
-      {items.map((item) => (
-        <article
-          className="cart-row"
-          key={item.id}
-        >
-          <img
-            className="cart-image"
-            src={item.image}
-            alt={item.name}
-          />
+      {/* Cart Items */}
+      {items.map((item) => {
 
-          <div>
-            <h3>{item.name}</h3>
+        const itemTotal =
+          item.price * item.quantity;
 
-            <p>
-              Unit Price: $
-              {item.price.toFixed(2)}
-            </p>
-
-            <p>
-              Item Total:{" "}
-              <strong>
-                $
-                {(
-                  item.price * item.quantity
-                ).toFixed(2)}
-              </strong>
-            </p>
-          </div>
-
-          <div className="quantity-controls">
-            <button
-              className="quantity-button"
-              aria-label={`Decrease ${item.name}`}
-              onClick={() =>
-                dispatch(
-                  updateQuantity({
-                    id: item.id,
-                    change: -1
-                  })
-                )
-              }
-            >
-              −
-            </button>
-
-            <strong>{item.quantity}</strong>
-
-            <button
-              className="quantity-button"
-              aria-label={`Increase ${item.name}`}
-              onClick={() =>
-                dispatch(
-                  updateQuantity({
-                    id: item.id,
-                    change: 1
-                  })
-                )
-              }
-            >
-              +
-            </button>
-          </div>
-
-          <button
-            className="danger-button"
-            onClick={() =>
-              dispatch(removeItem(item.id))
-            }
+        return (
+          <article
+            className="cart-row"
+            key={item.id}
           >
-            Delete
-          </button>
-        </article>
-      ))}
 
+            {/* Plant Thumbnail */}
+            <img
+              className="cart-image"
+              src={item.image}
+              alt={item.name}
+            />
+
+            {/* Plant Details */}
+            <div>
+              <h3>{item.name}</h3>
+
+              <p>
+                Unit Price: $
+                {item.price.toFixed(2)}
+              </p>
+
+              <p>
+                Quantity: {item.quantity}
+              </p>
+
+              <p>
+                Item Total:{" "}
+                <strong>
+                  ${itemTotal.toFixed(2)}
+                </strong>
+              </p>
+            </div>
+
+            {/* Quantity Controls */}
+            <div className="quantity-controls">
+
+              <button
+                className="quantity-button"
+                aria-label={`Decrease ${item.name}`}
+                onClick={() =>
+                  handleDecrease(
+                    item.id,
+                    item.quantity
+                  )
+                }
+              >
+                −
+              </button>
+
+              <strong>
+                {item.quantity}
+              </strong>
+
+              <button
+                className="quantity-button"
+                aria-label={`Increase ${item.name}`}
+                onClick={() =>
+                  handleIncrease(item.id)
+                }
+              >
+                +
+              </button>
+
+            </div>
+
+            {/* Delete Button */}
+            <button
+              className="danger-button"
+              onClick={() =>
+                handleDelete(item.id)
+              }
+            >
+              Delete
+            </button>
+
+          </article>
+        );
+      })}
+
+      {/* Cart Actions */}
       <div className="cart-actions">
+
         <Link to="/plants">
           <button className="secondary-button">
             Continue Shopping
@@ -144,11 +199,15 @@ export default function CartItem() {
 
         <button
           className="primary-button"
-          onClick={() => alert("Coming Soon")}
+          onClick={() =>
+            alert("Coming Soon")
+          }
         >
           Checkout
         </button>
+
       </div>
+
     </main>
   );
 }
